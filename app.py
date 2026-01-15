@@ -214,7 +214,7 @@ if fact_file:
 
         lib = join_nonempty(["Facture", fact, cname])
 
-        piece_ref = f"FAC-{fact}" if fact else f"FAC-{ecriture}"
+        piece_ref = fact if fact else str(ecriture)
 
         fec += [
             fec_row(j_ve, "VENTES", ecriture, date,
@@ -285,7 +285,7 @@ if pay_file:
 
         lib = join_nonempty(["Encaissement", fact, cname, mode])
 
-        piece_ref = f"CS-{ecriture}"
+        piece_ref = fact if fact else f"CS-{ecriture}"
 
         # Sens (si amt négatif => annulation)
         if amt >= 0:
