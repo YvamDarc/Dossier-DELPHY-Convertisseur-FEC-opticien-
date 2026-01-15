@@ -280,7 +280,7 @@ def auto_map_columns(df: pd.DataFrame, kind: str):
 # UI
 # -----------------------------
 st.set_page_config(page_title="DELPHY - Export FEC Opticien", layout="wide")
-st.title("Export FEC — Factures / Encaissements (fichiers indépendants)")
+st.title("DELPHY - Export FEC — Factures / Encaissements (fichiers indépendants)")
 
 with st.sidebar:
     st.header("Paramètres")
