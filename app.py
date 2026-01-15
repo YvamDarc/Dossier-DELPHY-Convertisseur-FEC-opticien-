@@ -152,7 +152,7 @@ with st.sidebar:
     use_aux = st.checkbox("CompAux = ID client", True)
     use_auxlib = st.checkbox("Nom client en CompAuxLib", True)
 
-    sep = st.selectbox("Séparateur FEC", ["|", ";", "\t"], index=0)
+    sep = st.selectbox("Séparateur FEC", [";","\t"], index=0)
 
 # ======================================================
 # FICHIERS
