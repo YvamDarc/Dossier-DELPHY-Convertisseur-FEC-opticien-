@@ -136,7 +136,7 @@ with st.sidebar:
     st.subheader("Comptes")
     cpt_vente = st.text_input("707 Ventes", "7071")
     cpt_tva   = st.text_input("44571 TVA", "44571")
-    cpt_cli   = st.text_input("411 Clients", "FCLIENTS")
+    cpt_cli   = st.text_input("411 Clients", "CCLIENTS")
 
     st.subheader("Caisse (classe 53)")
     cpt_esp = st.text_input("Espèces", "531")
