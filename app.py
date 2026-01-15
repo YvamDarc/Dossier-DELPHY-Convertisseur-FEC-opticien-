@@ -140,9 +140,9 @@ with st.sidebar:
 
     st.subheader("Caisse (classe 53)")
     cpt_esp = st.text_input("Espèces", "531")
-    cpt_chq = st.text_input("Chèque", "532")
-    cpt_cb  = st.text_input("Carte bleue", "533")
-    cpt_aut = st.text_input("Autre / Virement", "534")
+    cpt_chq = st.text_input("Chèque", "582")
+    cpt_cb  = st.text_input("Carte bleue", "583")
+    cpt_aut = st.text_input("Autre / Virement", "585")
 
     st.subheader("Journaux")
     j_ve = st.text_input("Ventes", "VE")
