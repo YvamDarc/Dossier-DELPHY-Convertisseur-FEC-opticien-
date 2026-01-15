@@ -267,12 +267,17 @@ with st.sidebar:
     st.subheader("Journaux")
     jnl_ve = st.text_input("Journal ventes", value="VE")
     jnl_ve_lib = st.text_input("Libellé ventes", value="VENTES")
-    jnl_bq = st.text_input("Journal banque", value="BQ")
-    jnl_bq_lib = st.text_input("Libellé banque", value="BANQUE")
 
-    st.subheader("Lettrage")
-    use_aux_per_client = st.checkbox("CompAuxNum = ID client", value=True)
-    use_client_name_in_auxlib = st.checkbox("CompAuxLib = Nom client", value=True)
+    jnl_cs = st.text_input("Journal encaissements", value="CS")
+    jnl_cs_lib = st.text_input("Libellé encaissements", value="CAISSE")
+
+    st.subheader("Comptes contrepartie encaissements (classe 53)")
+    cpt_especes = st.text_input("Espèces", value="531")
+    cpt_cheque  = st.text_input("Chèque", value="532")
+    cpt_cb      = st.text_input("Carte bleue", value="533")
+    cpt_autre   = st.text_input("Autre", value="534")
+
+    treat_vir_as_autre = st.checkbox("Classer 'Vir' (virement) dans 'Autre' (534)", value=True)
 
     st.subheader("Export")
     sep = st.selectbox("Séparateur", options=["|", ";", "\t"], index=0)
@@ -404,7 +409,7 @@ if fact_file:
         st.error(f"Erreur traitement FACTURES: {e}")
 
 # -----------------------------
-# ENCAISSEMENTS
+# ENCAISSEMENTS (Journal CS / contrepartie 53xx)
 # -----------------------------
 df_pay = None
 if pay_file:
@@ -420,6 +425,19 @@ if pay_file:
 
         df_pay["fact_no"] = df_pay["InvoiceNo"].apply(clean_invoice_no) if "InvoiceNo" in df_pay.columns else ""
         df_pay = df_pay[df_pay["montant_abs"] > 0.000001].copy()
+
+        def compte_53_from_mode(mode: str):
+            m = sstr(mode).lower()
+            # mappings fréquents
+            if "esp" in m or "espe" in m or "cash" in m:
+                return cpt_especes, "Caisse espèces"
+            if "chq" in m or "cheq" in m or "chèque" in m or "cheque" in m:
+                return cpt_cheque, "Caisse chèques"
+            if "cb" in m or "carte" in m or "visa" in m or "master" in m:
+                return cpt_cb, "Caisse CB"
+            if "vir" in m and treat_vir_as_autre:
+                return cpt_autre, "Caisse autres"
+            return cpt_autre, "Caisse autres"
 
         for _, r in df_pay.iterrows():
             date_ecr = sstr(r.get("date_fec", ""))
@@ -439,7 +457,19 @@ if pay_file:
             amt = float(r.get("montant_abs", 0.0))
             sign = 1 if float(r.get("montant_num", 0.0)) >= 0 else -1
 
-            piece_ref = make_piece_ref("BORD", bord, "FAC", fact_no, fallback=f"RG-{date_ecr}-{ecriture_num}")
+            # compte de contrepartie 53xx
+            compte_53, compte_53_lib = compte_53_from_mode(mode)
+
+            # pièce même si pas de facture
+            piece_ref = make_piece_ref(
+                "CS",
+                date_ecr,
+                f"B{bord}" if sstr(bord) else "",
+                f"C{client_id}" if sstr(client_id) else "",
+                fallback=f"CS-{date_ecr}-{ecriture_num}"
+            )
+
+            # lettrage si facture dispo
             let = fact_no
 
             lib = join_nonempty([
@@ -454,37 +484,49 @@ if pay_file:
                 f"Echéance:{echeance}" if sstr(echeance) else "",
             ])
 
+            # Ecriture CS :
+            # Encaissement + : 53xx D / 411 C
+            # Encaissement - : 53xx C / 411 D
             if sign > 0:
-                fec_rows.append(fec_row(jnl_bq, jnl_bq_lib, ecriture_num, date_ecr,
-                                        compte_banque, "Banque",
-                                        "", "",
-                                        piece_ref, piece_date, lib,
-                                        Debit=amt, Credit=0.0,
-                                        EcritureLet=let))
-                fec_rows.append(fec_row(jnl_bq, jnl_bq_lib, ecriture_num, date_ecr,
-                                        compte_client_global, "Clients",
-                                        auxnum, auxlib,
-                                        piece_ref, piece_date, lib,
-                                        Debit=0.0, Credit=amt,
-                                        EcritureLet=let))
+                fec_rows.append(fec_row(
+                    jnl_cs, jnl_cs_lib, ecriture_num, date_ecr,
+                    compte_53, compte_53_lib,
+                    "", "",
+                    piece_ref, piece_date, lib,
+                    Debit=amt, Credit=0.0,
+                    EcritureLet=let
+                ))
+                fec_rows.append(fec_row(
+                    jnl_cs, jnl_cs_lib, ecriture_num, date_ecr,
+                    compte_client_global, "Clients",
+                    auxnum, auxlib,
+                    piece_ref, piece_date, lib,
+                    Debit=0.0, Credit=amt,
+                    EcritureLet=let
+                ))
             else:
-                fec_rows.append(fec_row(jnl_bq, jnl_bq_lib, ecriture_num, date_ecr,
-                                        compte_banque, "Banque",
-                                        "", "",
-                                        piece_ref, piece_date, lib,
-                                        Debit=0.0, Credit=amt,
-                                        EcritureLet=let))
-                fec_rows.append(fec_row(jnl_bq, jnl_bq_lib, ecriture_num, date_ecr,
-                                        compte_client_global, "Clients",
-                                        auxnum, auxlib,
-                                        piece_ref, piece_date, lib,
-                                        Debit=amt, Credit=0.0,
-                                        EcritureLet=let))
+                fec_rows.append(fec_row(
+                    jnl_cs, jnl_cs_lib, ecriture_num, date_ecr,
+                    compte_53, compte_53_lib,
+                    "", "",
+                    piece_ref, piece_date, lib,
+                    Debit=0.0, Credit=amt,
+                    EcritureLet=let
+                ))
+                fec_rows.append(fec_row(
+                    jnl_cs, jnl_cs_lib, ecriture_num, date_ecr,
+                    compte_client_global, "Clients",
+                    auxnum, auxlib,
+                    piece_ref, piece_date, lib,
+                    Debit=amt, Credit=0.0,
+                    EcritureLet=let
+                ))
 
             ecriture_num += 1
 
     except Exception as e:
         st.error(f"Erreur traitement ENCAISSEMENTS: {e}")
+
 
 # -----------------------------
 # Affichages + Download
